@@ -467,6 +467,8 @@ public abstract class ModelTestBase implements ScotlandYardGameFactory {
 			softly.assertThat(moves).doesNotContainNull();
 			softly.assertAll();
 			callback.accept(moves.iterator().next());
+			//System.out.format("NUMBER OF MOVES: %d\n", moves.size());
+			//moves.iterator().next();
 			return null;
 		};
 	}

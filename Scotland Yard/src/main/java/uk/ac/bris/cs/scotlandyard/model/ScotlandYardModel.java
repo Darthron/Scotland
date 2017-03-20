@@ -112,13 +112,18 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer <Move> {
 		// Initialise the spectator list
 		spectators = new LinkedList <Spectator> ();
 
-		currentRound = 1;
+		currentRound = 0;
 		mrXLastKnownLocation = 0;
 		
 	}
 
 	@Override
 	public void registerSpectator(Spectator spectator) {
+	    if (null == spectator)
+	    {
+	        throw new NullPointerException("Null spectator");
+	    }
+
 		if (spectators.contains(spectator))
 		{
 			throw new IllegalArgumentException("Spectator already exists");
@@ -129,6 +134,11 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer <Move> {
 
 	@Override
 	public void unregisterSpectator(Spectator spectator) {
+	    if (null == spectator)
+	    {
+	        throw new NullPointerException("Null spectator");
+	    }
+
 		if (! spectators.remove(spectator))
 		{
 			throw new IllegalArgumentException("Spectator does not exist");
@@ -137,7 +147,6 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer <Move> {
 
 	@Override
 	public void startRotate() {
-		// TODO
 		ScotlandYardPlayer playerToMove;
 
 
@@ -145,7 +154,6 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer <Move> {
 		playerToMove.player().makeMove(this,
 							  		   playerToMove.location(),
 									   getAvailableMoves(playerToMove),
-									   //new HashSet <Move> (),
 							  		   this);
 	}
 
@@ -154,34 +162,53 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer <Move> {
 	accept(Move move)
 	{
 		HashSet <Move> 		availableMoves;
+		Move                hiddenMove;
 		ScotlandYardPlayer 	player;
 
 		if (null == move)
 		{
 			throw new NullPointerException();
 		}
+        
+        // Get current player
+		player = getPlayer(getCurrentPlayer());
 
-		availableMoves = (HashSet <Move>) getAvailableMoves(getPlayer(getCurrentPlayer()));
+		availableMoves = (HashSet <Move>) getAvailableMoves(player);
 		if (! availableMoves.contains(move))
 		{
 			throw new IllegalArgumentException();
 		}
 
+        if (isMrX(player))
+        {
+		    hiddenMove = hideMoveIfNotRevealRound(move);
+		}
+		else
+		{
+		    hiddenMove = move;
+		}
+
 		// Let spectators know about the made move
-		notifySpectatorsMoveMade(move);
+		notifySpectatorsMoveMade(hiddenMove);
 
 		// Notify spectators about started round if mrX moves
-		notifySpectatorsRoundStarted();
+		if (isMrX(player))
+		{
+		    currentRound++;
+		    notifySpectatorsRoundStarted();
+	    }
 
-		player = getPlayer(getCurrentPlayer());
 		// Update the player's location and tickets
 		if (move instanceof TicketMove)
 		{
 			player.location(((TicketMove) move).destination());
 			player.tickets().replace(((TicketMove) move).ticket(),
 									 player.tickets().get(((TicketMove) move).ticket()) - 1);
-			mrX.tickets().replace(((TicketMove) move).ticket(),
-								  player.tickets().get(((TicketMove) move).ticket()) + 1);
+			if (! isMrX(player))
+			{
+			    mrX.tickets().replace(((TicketMove) move).ticket(),
+								      player.tickets().get(((TicketMove) move).ticket()) + 1);
+			}
 		}
 		else if (move instanceof DoubleMove)
 		{
@@ -192,25 +219,27 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer <Move> {
 									 player.tickets().get(((DoubleMove) move).secondMove().ticket()) - 1);
 			player.tickets().replace(Ticket.valueOf("Double"),
 									 player.tickets().get(Ticket.valueOf("Double")) - 1);
+			
+			notifySpectatorsMoveMade(((DoubleMove) hiddenMove).firstMove());
+
 			currentRound++;
-			notifySpectatorsMoveMade(((DoubleMove) move).firstMove());
-			notifySpectatorsMoveMade(((DoubleMove) move).secondMove());
 			notifySpectatorsRoundStarted();
+			
+			notifySpectatorsMoveMade(((DoubleMove) hiddenMove).secondMove());
 		}
+		
 
-
-		if (currentPlayer == players.getLast())
+        // If we reached the end of the players list
+        currentPlayer.next();
+		if (! currentPlayer.hasNext())
 		{
 			currentPlayer = players.listIterator(0);
-			currentRound++;
 			notifySpectatorsRotationComplete();
 		}
-
-		if (rounds.get(currentRound))
+		else
 		{
-			mrXLastKnownLocation = mrX.location();
+		    startRotate();
 		}
-		startRotate();
 	}
 
 	@Override
@@ -271,8 +300,9 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer <Move> {
 	@Override
 	public boolean isGameOver() {
 		// TODO
-		//throw new RuntimeException("Implement me");
-		return false;
+
+        // Check if mrX was caught
+        
 	}
 
 	@Override
@@ -360,29 +390,28 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer <Move> {
 	getAvailableMoves(ScotlandYardPlayer player)
 	{
 		Collection <Edge <Integer, Transport>> 	edgesFromNode;
-		Set <Move> 								availableMoves = new HashSet <Move> ();
+		HashSet <Move> 							availableMoves = new HashSet <Move> ();
 		String[] 								classicTransportNames = {"Bus",
 																  		 "Taxi",
 																  		 "Underground"};
 
 		edgesFromNode = graph.getEdgesFrom(graph.getNode(player.location()));
+		//System.out.format("PLAYER LOCATION: %d\n", player.location());
 
 		// For both mrX and detectives
 		for (Edge <Integer, Transport> edge : edgesFromNode)
 		{
-			if (edge.data() == Transport.Taxi)
-			System.out.format(" %d", edge.destination().value());
-
 			// Ignore boat transportation
 			if ((Transport.Boat != edge.data()) &&
 				(0 < player.tickets().get(Ticket.fromTransport(edge.data()))) &&
-				(! isLocationOccupied(edge.destination().value())) )
+				(! isLocationOccupiedByDetective(edge.destination().value())) )
 			{
 				availableMoves.add(new TicketMove(player.colour(),
 												  Ticket.fromTransport(edge.data()),
 												  edge.destination().value()));
 			}
 		}
+
 
 		// For mrX only
 		if (isMrX(player))
@@ -413,7 +442,7 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer <Move> {
 				for (Edge <Integer, Transport> edge : edgesFromNode)
 				{
 					if ( (Transport.Boat == edge.data()) &&
-						 (! isLocationOccupied(edge.destination().value())) )
+						 (! isLocationOccupiedByDetective(edge.destination().value())) )
 					{
 						availableMoves.add(new TicketMove(player.colour(),
 														  Ticket.Secret,
@@ -429,7 +458,7 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer <Move> {
 			// The set of available moves we have built so far contains valid first moves
 			// in a double move, so we will use it
 			if ( (player.tickets().get(Ticket.Double) > 0) &&
-				 (currentRound < rounds.size()) )
+				 (currentRound + 1 < rounds.size()) )
 			{
 				for (Move move : availableMoves)
 				{
@@ -441,14 +470,13 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer <Move> {
 					player.location(((TicketMove) move).destination());
 
 					for (Edge <Integer, Transport> edge : 
-							graph.getEdgesFrom(graph.getNode((((TicketMove) move).destination()))))
+							graph.getEdgesFrom(graph.getNode((player.location()))))
 					{
 						// Check if mrX has the ticket required to travel to the second destination.
 						// Keep in mind that we should consider the fact that he already used a ticket
 						// for the first move, so he may not have one ticket for the second step
-						
 						if ( (player.tickets().get(Ticket.fromTransport(edge.data())) > 0) &&
-							 (! isLocationOccupied(edge.destination().value())) )
+							 (! isLocationOccupiedByDetective(edge.destination().value())) )
 						{
 							doubleMoves.add(new DoubleMove(player.colour(),
 														   (TicketMove) move,
@@ -457,7 +485,7 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer <Move> {
 																		  edge.destination().value())));
 						}
 						if ( (player.tickets().get(Ticket.valueOf("Secret")) > 0) &&
-							 (! isLocationOccupied(edge.destination().value())) )
+							 (! isLocationOccupiedByDetective(edge.destination().value())) )
 						{
 							doubleMoves.add(new DoubleMove(player.colour(),
 														   (TicketMove) move,
@@ -465,7 +493,6 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer <Move> {
 																		  Ticket.Secret,
 																		  edge.destination().value())));
 						}
-
 					}
 
 					// Restore the correct number of tickets of the type used for move
@@ -476,14 +503,28 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer <Move> {
 			}
 			// Restore the original location of the player
 			player.location(tempLocation);
-
+			
 			for (Move doubleMove : doubleMoves)
 			{
 				availableMoves.add(doubleMove);
 			}
 		}
 
-		if (availableMoves.isEmpty())
+		/*for (Move m : availableMoves)
+		{
+		    if (m instanceof TicketMove)
+		    {
+		        System.out.format("%d\n", ((TicketMove) m).destination());
+		    }
+		    else
+		    {
+		        System.out.format("%d %d\n", ((DoubleMove) m).firstMove().destination(),
+		        ((DoubleMove) m).secondMove().destination());
+		    }
+		}*/
+
+		if ((! isMrX(player)) &&
+		    (availableMoves.isEmpty()))
 		{
 			availableMoves.add(new PassMove(player.colour()));
 		}
@@ -528,11 +569,11 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer <Move> {
 
 	// Input: potentialLocation (int) - the location to which we want to move
 	// Preconditions: The ptential location should be a valid location integer
-	// Output: Boolean - true if the location is occupied, 
+	// Output: Boolean - true if the location is occupied by a detective, 
 	// 					 false otherwise
 	// Postconditions: -
-	boolean
-	isLocationOccupied(int potentialLocation)
+	private boolean
+	isLocationOccupiedByDetective(int potentialLocation)
 	{
 		// Check if the location is valid
 		if (! graph.containsNode(potentialLocation))
@@ -542,7 +583,8 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer <Move> {
 
 		for (ScotlandYardPlayer player : players)
 		{
-			if (player.location() == potentialLocation)
+			if ((! isMrX(player)) &&
+			    (player.location() == potentialLocation))
 			{
 				return true;
 			}
@@ -552,7 +594,7 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer <Move> {
 	}
 
 	// Notifies the spectators on a made move
-	void
+	private void
 	notifySpectatorsMoveMade(Move move)
 	{
 		for (Spectator spectator : spectators)
@@ -563,7 +605,7 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer <Move> {
 	}
 
 	// Notifies the spectators on round started
-	void
+	private void
 	notifySpectatorsRoundStarted()
 	{
 		for (Spectator spectator : spectators)
@@ -574,7 +616,7 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer <Move> {
 	}
 
 	// Notifies the spectators on game over
-	void
+	private void
 	notifySpectatorsGameOver(Set <Colour> winningPlayers)
 	{
 		for (Spectator spectator : spectators)
@@ -585,7 +627,7 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer <Move> {
 	}
 
 	// Notifies the spectators on rotation complete
-	void
+	private void
 	notifySpectatorsRotationComplete()
 	{
 		for (Spectator spectator : spectators)
@@ -593,4 +635,190 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer <Move> {
 			spectator.onRotationComplete(this);
 		}
 	}
+
+	// Update MrX's last known location if it's reveal round
+    private void
+    updateMrXLastKnownLocation()
+    {
+        if (rounds.get(currentRound - 1))
+        {
+            mrXLastKnownLocation = mrX.location();
+        }
+    }
+
+    // Returns true if the current round is a reveal round
+    private boolean
+    currentRoundIsReveal()
+    {
+        return rounds.get(currentRound - 1);
+    }
+
+    // Input : move (Move)
+    // Preconditions: The move should be valid, i.e. exists a node in the graph such that I
+    //                can apply the move. If the move is a DoubleMove, the second move
+    //                must be available from the location arrived after the first move
+    // Output : move if reveal round,
+    //          a new move, with the location(s) set to 0, if it is not a reveal round
+    // Postconditions: the returned move is valid
+    private Move
+    hideMoveIfNotRevealRound(Move move)
+    {
+        checkMoveIsValid(move);
+
+        if (move instanceof TicketMove)
+        {
+            return hideTicketMoveIfNotRevealRound((TicketMove) move);
+        }
+        else if (move instanceof DoubleMove)
+        {
+            return hideDoubleMoveIfNotRevealRound((DoubleMove) move);
+        }
+
+        return move;
+    }
+
+    // Checks if a move is valid
+    private void
+    checkMoveIsValid(Move move)
+    {
+        // Every PassMove is valid
+        if (move instanceof PassMove)
+        {
+            return;
+        }
+        else if (move instanceof TicketMove)
+        {
+            checkTicketMoveIsValid((TicketMove) move);
+        }
+        else if (move instanceof DoubleMove)
+        {
+            checkDoubleMoveIsValid((DoubleMove) move);
+        }
+    }
+
+    // Checks if a TicketMove is valid
+    private void
+    checkTicketMoveIsValid(TicketMove move)
+    {
+        // Check if the location is valid
+        if (! graph.containsNode(move.destination()))
+        {
+            throw new IllegalArgumentException("The provided move contains a location that does not exist");
+        }
+
+        // Check if the location is isolated
+        if (0 == graph.getEdgesTo(graph.getNode(move.destination())).size())
+        {
+            throw new IllegalArgumentException("The provided move contains a destination unconnected to any other location");
+        }
+
+        // If the used ticket is a secret, then it's a valid move, since we know the destination
+        // is connected
+        if (Ticket.Secret == move.ticket())
+        {
+            return;
+        }
+
+        // Check if there is an edge that matches the ticket
+        for (Edge <Integer, Transport> edge : graph.getEdgesTo(graph.getNode(move.destination())))
+        {
+            if (move.ticket() == Ticket.fromTransport(edge.data()))
+            {
+                // We have found a node that is connected to our destination and whose
+                // method of transportation matches the ticket's
+                return;
+            }
+        }
+
+        // If we haven't found a node, throw an error
+        throw new IllegalArgumentException("The move's destination is not connected to a node such that the ticket matches the transport");
+    }
+
+    // Checks if a DoubleMove is valid
+    private void
+    checkDoubleMoveIsValid(DoubleMove move)
+    {
+        // Check if the individual moves are valid
+        checkTicketMoveIsValid(move.firstMove());
+        checkTicketMoveIsValid(move.secondMove());
+
+        // Check if the first destination is connected to the second one and if the 
+        // ticket matches the transportation method
+        for (Edge <Integer, Transport> edge : graph.getEdgesFrom(graph.getNode(move.firstMove().destination())))
+        {
+            // The second move is valid
+            if ( (edge.destination().value() == move.secondMove().destination()) &&
+                 (Ticket.fromTransport(edge.data()) == move.secondMove().ticket()) )
+            {
+                return;
+            }
+        }
+
+        // If we reach this point, we have to throw an exception
+        throw new IllegalArgumentException("The second move can not be performed from the destination of the first move");
+    }
+
+    // Hides the location of the move if reveal round, otherwise returns the move
+    private Move
+    hideTicketMoveIfNotRevealRound(TicketMove move)
+    {
+        checkTicketMoveIsValid(move);
+
+        if (rounds.get(currentRound))
+        {
+            return new TicketMove(move.colour(),
+                                  move.ticket(),
+                                  mrXLastKnownLocation);
+        }
+        
+        mrX.location(move.destination());
+        return move;
+    }
+
+    // Hides one of the destinations of the double move if reveal round
+    private Move
+    hideDoubleMoveIfNotRevealRound(DoubleMove move)
+    {
+        checkDoubleMoveIsValid(move);
+
+        // If the round corresponding to the first move is reveal round
+        if ( (rounds.get(currentRound)) &&
+             (! rounds.get(currentRound + 1)) )
+        {
+            mrXLastKnownLocation = move.firstMove().destination();
+            return new DoubleMove(move.colour(),
+                                  move.firstMove(),
+                                  new TicketMove(move.secondMove().colour(),
+                                                 move.secondMove().ticket(),
+                                                 mrXLastKnownLocation));
+        }
+        // If the round corresponding to the second move is reveal round
+        else if ( (rounds.get(currentRound + 1)) &&
+                  (! rounds.get(currentRound)) )
+        {
+            TicketMove newFirstMove = new TicketMove(move.firstMove().colour(),
+                                                     move.firstMove().ticket(),
+                                                     mrXLastKnownLocation);
+            mrXLastKnownLocation = move.finalDestination();
+            return new DoubleMove(move.colour(),
+                                  newFirstMove,
+                                  move.secondMove());
+        }
+        // If both are reveal
+        else if ( (rounds.get(currentRound)) &&
+                  (rounds.get(currentRound + 1)) )
+        {
+            mrXLastKnownLocation = move.finalDestination();
+            return move;
+        }
+
+        // If no reveal round
+        return new DoubleMove(move.colour(),
+                              new TicketMove(move.firstMove().colour(),
+                                             move.firstMove().ticket(),
+                                             mrXLastKnownLocation),
+                              new TicketMove(move.secondMove().colour(),
+                                             move.secondMove().ticket(),
+                                             mrXLastKnownLocation));
+    }
 }

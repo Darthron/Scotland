@@ -99,7 +99,6 @@ public class ModelSpectatorTest extends ModelTestBase {
 		}).when(spectator).onMoveMade(any(), any());
 		game.startRotate();
 
-		System.out.print("BBBBBBBBBBBBBBBBBBB");
 		InOrder order = inOrder(spectator);
 		// spectator should have the following methods called in order during a
 		// double move
