@@ -5,7 +5,7 @@
 [INFO] ------------------------------------------------------------------------
 [INFO] 
 [INFO] --- maven-clean-plugin:3.0.0:clean (default-clean) @ cw-model ---
-[INFO] Deleting /home/darthron/Scotland/Scotland Yard/target
+[INFO] Deleting /home/fe16/rm16167/linux/University/PandA IIA/Scotland/Scotland Yard/target
 [INFO] 
 [INFO] --- maven-resources-plugin:3.0.1:resources (default-resources) @ cw-model ---
 [INFO] Using 'UTF-8' encoding to copy filtered resources.
@@ -13,9 +13,9 @@
 [INFO] 
 [INFO] --- maven-compiler-plugin:3.6.0:compile (default-compile) @ cw-model ---
 [INFO] Changes detected - recompiling the module!
-[INFO] Compiling 78 source files to /home/darthron/Scotland/Scotland Yard/target/classes
-[WARNING] /home/darthron/Scotland/Scotland Yard/src/main/java/uk/ac/bris/cs/scotlandyard/model/ScotlandYardModel.java:[379,24] unchecked call to ImmutableGraph(uk.ac.bris.cs.gamekit.graph.Graph<V,D>) as a member of the raw type uk.ac.bris.cs.gamekit.graph.ImmutableGraph
-[WARNING] /home/darthron/Scotland/Scotland Yard/src/main/java/uk/ac/bris/cs/scotlandyard/model/ScotlandYardModel.java:[379,24] unchecked conversion
+[INFO] Compiling 78 source files to /home/fe16/rm16167/linux/University/PandA IIA/Scotland/Scotland Yard/target/classes
+[WARNING] /home/fe16/rm16167/linux/University/PandA IIA/Scotland/Scotland Yard/src/main/java/uk/ac/bris/cs/scotlandyard/model/ScotlandYardModel.java:[378,24] unchecked call to ImmutableGraph(uk.ac.bris.cs.gamekit.graph.Graph<V,D>) as a member of the raw type uk.ac.bris.cs.gamekit.graph.ImmutableGraph
+[WARNING] /home/fe16/rm16167/linux/University/PandA IIA/Scotland/Scotland Yard/src/main/java/uk/ac/bris/cs/scotlandyard/model/ScotlandYardModel.java:[378,24] unchecked conversion
   required: uk.ac.bris.cs.gamekit.graph.ImmutableGraph<java.lang.Integer,uk.ac.bris.cs.scotlandyard.model.Transport>
   found:    uk.ac.bris.cs.gamekit.graph.ImmutableGraph
 [INFO] 
@@ -25,7 +25,7 @@
 [INFO] 
 [INFO] --- maven-compiler-plugin:3.6.0:testCompile (default-testCompile) @ cw-model ---
 [INFO] Changes detected - recompiling the module!
-[INFO] Compiling 13 source files to /home/darthron/Scotland/Scotland Yard/target/test-classes
+[INFO] Compiling 13 source files to /home/fe16/rm16167/linux/University/PandA IIA/Scotland/Scotland Yard/target/test-classes
 [INFO] 
 [INFO] --- maven-surefire-plugin:2.19.1:test (default-test) @ cw-model ---
 
@@ -33,7 +33,7 @@
  T E S T S
 -------------------------------------------------------
 Running uk.ac.bris.cs.scotlandyard.model.ModelTest
-Tests run: 114, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.791 sec - in uk.ac.bris.cs.scotlandyard.model.ModelTest
+Tests run: 114, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.017 sec - in uk.ac.bris.cs.scotlandyard.model.ModelTest
 
 Results :
 
@@ -42,7 +42,7 @@ Tests run: 114, Failures: 0, Errors: 0, Skipped: 0
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD SUCCESS
 [INFO] ------------------------------------------------------------------------
-[INFO] Total time: 4.503 s
-[INFO] Finished at: 2017-03-22T02:08:06+00:00
-[INFO] Final Memory: 24M/318M
+[INFO] Total time: 7.614s
+[INFO] Finished at: Fri Mar 24 14:45:22 GMT 2017
+[INFO] Final Memory: 21M/319M
 [INFO] ------------------------------------------------------------------------

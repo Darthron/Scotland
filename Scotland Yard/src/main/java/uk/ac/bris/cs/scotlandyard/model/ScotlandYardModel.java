@@ -16,7 +16,6 @@ import uk.ac.bris.cs.gamekit.graph.Node;
 import uk.ac.bris.cs.gamekit.graph.ImmutableGraph;
 import uk.ac.bris.cs.scotlandyard.model.ScotlandYardPlayer;
 
-// TODO implement all methods and pass all tests
 public class ScotlandYardModel implements ScotlandYardGame, Consumer <Move> {
 
 	private List <Boolean> 						rounds;
@@ -75,6 +74,8 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer <Move> {
 		// Check mrX tickets
 		checkPlayerTickets(mrX);
 
+		// Add the location and colour of mrX to a set in order to check
+		// for duplicates of locations and colours among the players
 		locations.add(mrX.location);
 		colours.add(mrX.colour);
 		
@@ -94,11 +95,13 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer <Move> {
 				throw new NullPointerException();
 			}
 
+			// If the location of the detective is already occupied
 			if (locations.contains(currentDetective.location))
 			{
 				throw new IllegalArgumentException("Duplicate location");	
 			}
 
+			// If the colour of the detective is already used
 			if (colours.contains(currentDetective.colour))
 			{
 				throw new IllegalArgumentException("Duplicate colour");
@@ -113,7 +116,7 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer <Move> {
 			locations.add(currentDetective.location);
 			colours.add(currentDetective.colour);
 		}
-
+		
 		// Make current player the first player in the players list
 		currentPlayer = players.listIterator(0);	
 
@@ -125,8 +128,13 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer <Move> {
 		currentRotationComplete = false;
 	}
 
+	// Input: spectator (Spectator)
+	// Preconditions: spectator is not null and is not already registered
+	// Output: spectators (LinkedList <Spectator>
+	// Postconditions: List of spectators that contains the spectator we've just added
 	@Override
-	public void registerSpectator(Spectator spectator) {
+	public void
+	registerSpectator(Spectator spectator) {
 	    if (null == spectator)
 	    {
 	        throw new NullPointerException("Null spectator");
@@ -140,8 +148,14 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer <Move> {
 		spectators.add(spectator);
 	}
 
+	
+	// Input: spectator (Spectator)
+	// Preconditions: spectator is not null and is registered
+	// Output: spectators (LinkedList <Spectator>
+	// Postconditions: List of spectators that dose not contain the spectator passed as argument
 	@Override
-	public void unregisterSpectator(Spectator spectator) {
+	public void
+	unregisterSpectator(Spectator spectator) {
 	    if (null == spectator)
 	    {
 	        throw new NullPointerException("Null spectator");
@@ -153,8 +167,10 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer <Move> {
 		}
 	}
 
+	// 
 	@Override
-	public void startRotate() {
+	public void
+	startRotate() {
 		ScotlandYardPlayer playerToMove;
 
 		playerToMove = getPlayer(getCurrentPlayer());
